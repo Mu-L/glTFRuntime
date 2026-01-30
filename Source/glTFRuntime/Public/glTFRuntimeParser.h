@@ -194,6 +194,28 @@ struct FglTFRuntimeAESDecrypterHook
 	}
 };
 
+DECLARE_DYNAMIC_DELEGATE_RetVal_TwoParams(FString, FglTFRuntimeUriRewriter, const FString&, Uri, UObject*, Context);
+DECLARE_DELEGATE_RetVal_TwoParams(FString, FglTFRuntimeNativeUriRewriter, const FString&, UObject*);
+
+USTRUCT(BlueprintType)
+struct FglTFRuntimeUriRewriterHook
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	FglTFRuntimeUriRewriter UriRewriter;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	UObject* Context = nullptr;
+
+	FglTFRuntimeNativeUriRewriter NativeUriRewriter;
+
+	bool IsBound() const
+	{
+		return UriRewriter.IsBound() || NativeUriRewriter.IsBound();
+	}
+};
+
 USTRUCT(BlueprintType)
 struct FglTFRuntimeConfig
 {
@@ -261,6 +283,15 @@ struct FglTFRuntimeConfig
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
 	FglTFRuntimeAESDecrypterHook AESDecrypterHook;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	FglTFRuntimeUriRewriterHook UriRewriterHook;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	FglTFRuntimeUriRewriterHook ArchiveUriRewriterHook;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "glTFRuntime")
+	bool bBaseDirectoryFromArchiveEntryPoint;
+
 	FglTFRuntimeConfig()
 	{
 		TransformBaseType = EglTFRuntimeTransformBaseType::Default;
@@ -275,6 +306,7 @@ struct FglTFRuntimeConfig
 		bAsBlob = false;
 		PrefixForUnnamedNodes = "node";
 		bNoArchive = false;
+		bBaseDirectoryFromArchiveEntryPoint = false;
 	}
 
 	FMatrix GetMatrix() const
@@ -2240,6 +2272,10 @@ public:
 		OffsetsMap.GetKeys(Items);
 	}
 
+	void Remap(const FString& From, const FString& To);
+
+	FString BaseDirectory;
+
 protected:
 	TMap<FString, uint32> OffsetsMap;
 	TMap<FString, TPair<uint32, uint32>> GlobalSizeMap;
@@ -2851,6 +2887,8 @@ protected:
 	FString BaseFilename;
 
 	TArray64<uint8> AsBlob;
+
+	FglTFRuntimeUriRewriterHook UriRewriterHook;
 
 public:
 
